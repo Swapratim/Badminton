@@ -99,13 +99,14 @@
         const b = remaining[j];
         if (relax < 1 && ctx.partnerUsed.has(pairKey(a, b))) continue;
         const opposite = a.woman !== b.woman;
-        if (relax < 1) {
-          if (type === "mens" && (a.woman || b.woman)) continue;
-          if (type === "womens" && (!a.woman || !b.woman)) continue;
-        }
+        // At relax 0, a same-gender round forbids only MIXED teams — men pair
+        // with men and women pair with women. This stays solvable because the
+        // "extra" gender pairs up among themselves rather than being forced to
+        // find a partner that doesn't exist.
+        if (relax < 1 && !wantOpposite && opposite) continue;
         let s = 0;
-        if (wantOpposite && !opposite) s += 6;
-        if (!wantOpposite && opposite && relax < 1) s += 8;
+        if (wantOpposite && !opposite) s += 6;   // mixed round wants M+F teams
+        if (!wantOpposite && opposite) s += 8;   // same-gender round avoids mixed teams (all tiers)
         s += Math.abs(skill(a) - skill(b)) * 0.5;
         if (ctx.lastPartner[a.id] === b.id) s += 5;
         s += Math.random() * 1.5;
@@ -139,6 +140,12 @@
         const s2 = t2.reduce((x, p) => x + skill(p), 0);
         let s = Math.abs(s1 - s2) * 2;
         s += spread * 0.6;
+        // Keep court composition consistent: men's team vs men's team and
+        // women's team vs women's team (and mixed vs mixed), so a men's round
+        // yields actual men's-doubles matches rather than men-vs-women courts.
+        const w1 = t1.filter(p => p.woman).length;
+        const w2 = t2.filter(p => p.woman).length;
+        s += Math.abs(w1 - w2) * 5;
         const gap1 = Math.abs(skill(t1[0]) - skill(t1[1]));
         const gap2 = Math.abs(skill(t2[0]) - skill(t2[1]));
         s += Math.abs(gap1 - gap2) * 1.5;
