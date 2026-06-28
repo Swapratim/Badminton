@@ -187,6 +187,10 @@ table.sched .vs { width: 44px; text-align: center; color: var(--muted); font-wei
 .rule-grid b { color: var(--court-dark); }
 
 .foot { text-align: center; color: var(--muted); font-size: .82rem; padding: 10px 16px 30px; }
+.dev-credit { margin: 10px auto 0; color: var(--court-dark); font-weight: 600; font-size: .9rem;
+  display: inline-block; padding: 8px 18px; border-radius: 999px; background: #fff;
+  border: 1px solid #d7e7df; box-shadow: var(--shadow); }
+.dev-credit strong { color: var(--court); }
 
 /* ---------- Toast ---------- */
 .toast {
