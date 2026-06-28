@@ -150,6 +150,12 @@
 
   /* ---------------- main ---------------- */
   function run() {
+    // Flush any in-progress edit (native number-input spinner / mobile keyboards
+    // commit their value to .value only on blur) so the very first click reads
+    // the just-changed Live Adjustments values instead of the previous ones.
+    if (document.activeElement && typeof document.activeElement.blur === "function") {
+      document.activeElement.blur();
+    }
     $("errMsg").textContent = "";
     const players = readPlayers();
     if (players.filter(p => p.name).length < 4) {
