@@ -7,7 +7,7 @@
     "test": "node test/engine.test.js && node test/dom.test.js",
     "test:engine": "node test/engine.test.js",
     "test:dom": "node test/dom.test.js",
-    "deploy": "wrangler pages deploy public --project-name=badminton --branch=main"
+    "deploy": "wrangler pages deploy public --project-name=badminton-swap --branch=main"
   },
   "devDependencies": {
     "jsdom": "^24.1.3",

@@ -4,7 +4,7 @@ A sleek, sporty **doubles roaster builder** for club badminton. Enter your playe
 courts, levels and play time — it generates a fair, balanced, printable match schedule
 you can share straight to WhatsApp.
 
-**Live:** https://badminton-d54.pages.dev
+**Live:** https://badminton-swap.pages.dev
 
 - ✅ No login, no sign-up
 - ✅ Nothing is stored — everything lives in the browser and clears on refresh
@@ -66,7 +66,7 @@ Static site on **Cloudflare Pages**:
 
 ```bash
 CLOUDFLARE_API_TOKEN=<token> CLOUDFLARE_ACCOUNT_ID=<id> \
-  wrangler pages deploy public --project-name=badminton --branch=main
+  wrangler pages deploy public --project-name=badminton-swap --branch=main
 ```
 
 ---

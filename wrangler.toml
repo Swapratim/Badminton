@@ -1,12 +1,11 @@
 # Cloudflare Pages config — deploys the static scheduler to a free *.pages.dev subdomain.
-# Live URL: https://badminton-d54.pages.dev  (free Cloudflare Pages subdomain;
-# the bare badminton.pages.dev was already taken, so CF assigned the -d54 suffix).
+# Live URL: https://badminton-swap.pages.dev  (free Cloudflare Pages subdomain).
 #
 # Deploy (token with "Cloudflare Pages: Edit"):
 #   CLOUDFLARE_API_TOKEN=<token> CLOUDFLARE_ACCOUNT_ID=<id> \
-#     wrangler pages deploy public --project-name=badminton --branch=main
+#     wrangler pages deploy public --project-name=badminton-swap --branch=main
 #
 # The app is 100% static (no backend, no build step). Nothing is stored server-side.
-name = "badminton"
+name = "badminton-swap"
 pages_build_output_dir = "public"
 compatibility_date = "2024-12-01"
