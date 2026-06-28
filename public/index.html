@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="IFD Badminton Match Scheduler — build fair, balanced doubles roasters for club play. No login, no data stored." />
+  <meta name="theme-color" content="#0b3d2e" />
+  <title>IFD Badminton Match Scheduler</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8F%B8%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ============ BANNER ============ -->
+  <header class="banner">
+    <div class="banner-inner">
+      <div class="logo">
+        <span class="shuttle" aria-hidden="true">🏸</span>
+        <div class="logo-text">
+          <h1>IFD Badminton Match Scheduler</h1>
+          <p class="tagline">Fair play. Balanced courts. Zero hassle.</p>
+        </div>
+      </div>
+      <div class="banner-court" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ============ INPUTS ============ -->
+    <section class="card inputs no-print" id="inputCard">
+      <h2 class="section-title"><span class="ico">⚙️</span> Setup</h2>
+
+      <div class="grid params">
+        <label class="field">
+          <span>Number of players</span>
+          <input type="number" id="numPlayers" min="4" max="60" value="12" />
+        </label>
+        <label class="field">
+          <span>Number of courts</span>
+          <input type="number" id="numCourts" min="1" max="15" value="3" />
+        </label>
+        <label class="field">
+          <span>Duration (hours)</span>
+          <input type="number" id="duration" min="0.5" max="8" step="0.5" value="2" />
+        </label>
+        <label class="field">
+          <span>Total rounds <small id="roundsHint">(auto: 5/hr)</small></span>
+          <input type="number" id="numRounds" min="1" max="40" value="10" />
+        </label>
+      </div>
+
+      <div class="players-head">
+        <h3>Players</h3>
+        <div class="players-actions">
+          <button class="btn ghost" id="fillSample" type="button">Sample names</button>
+          <button class="btn ghost" id="clearNames" type="button">Clear names</button>
+        </div>
+      </div>
+
+      <div class="players-legend">
+        <span>Name</span><span>Level</span><span class="cen">♀ Woman</span>
+      </div>
+      <div id="playerList" class="player-list"></div>
+
+      <div class="balance-bar" id="balanceBar"></div>
+
+      <button class="btn primary big" id="generate" type="button">
+        <span class="ico">🎯</span> Build Match Roaster
+      </button>
+      <p class="err" id="errMsg" role="alert"></p>
+    </section>
+
+    <!-- ============ TUNING (session-only knobs) ============ -->
+    <section class="card no-print" id="tuneCard" hidden>
+      <h2 class="section-title"><span class="ico">🎛️</span> Live Adjustments <small>(this session only)</small></h2>
+      <div class="grid tune">
+        <label class="field">
+          <span>Max level gap in a match</span>
+          <select id="maxGap">
+            <option value="1">1 level</option>
+            <option value="2" selected>2 levels (recommended)</option>
+            <option value="3">3 levels</option>
+            <option value="9">No limit</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Men's doubles rounds</span>
+          <input type="number" id="mensRounds" min="0" max="10" value="1" />
+        </label>
+        <label class="field">
+          <span>Women's doubles rounds</span>
+          <input type="number" id="womensRounds" min="0" max="10" value="0" />
+        </label>
+        <label class="field">
+          <span>Stronger level is</span>
+          <select id="strongDir">
+            <option value="high" selected>L4 (higher number)</option>
+            <option value="low">L1 (lower number)</option>
+          </select>
+        </label>
+      </div>
+      <div class="custom-rules">
+        <h3>Add a custom note / instruction</h3>
+        <div class="add-rule">
+          <input type="text" id="customRuleInput" placeholder="e.g. Keep Riya & Sam on separate courts" />
+          <button class="btn ghost" id="addRule" type="button">Add</button>
+        </div>
+        <ul id="customRuleList" class="custom-rule-list"></ul>
+        <p class="hint">Custom notes are shown on the sheet &amp; shared text. They are not saved anywhere and vanish on refresh.</p>
+      </div>
+      <button class="btn primary" id="rebuild" type="button"><span class="ico">🔄</span> Re-build with these settings</button>
+    </section>
+
+    <!-- ============ SCHEDULE OUTPUT ============ -->
+    <section id="output" hidden>
+      <div class="output-toolbar no-print">
+        <h2 class="section-title"><span class="ico">📋</span> Match Roaster</h2>
+        <div class="toolbar-btns">
+          <button class="btn whatsapp" id="shareWa" type="button"><span class="ico">📲</span> Share on WhatsApp</button>
+          <button class="btn ghost" id="copyText" type="button"><span class="ico">📄</span> Copy text</button>
+          <button class="btn ghost" id="printBtn" type="button"><span class="ico">🖨️</span> Print table</button>
+        </div>
+      </div>
+
+      <!-- Printable / shareable region -->
+      <div id="printable" class="printable">
+        <div class="print-head">
+          <h2>IFD Badminton Match Scheduler</h2>
+          <p id="printMeta" class="print-meta"></p>
+        </div>
+        <div id="scheduleTables"></div>
+        <div id="restSummary" class="rest-summary"></div>
+        <div id="printNotes" class="print-notes"></div>
+      </div>
+    </section>
+
+    <!-- ============ INSTRUCTIONS (always visible) ============ -->
+    <section class="card rules no-print">
+      <h2 class="section-title"><span class="ico">📖</span> Scheduling Rules &amp; Logic</h2>
+      <p class="rules-intro">Every roaster is generated against the rules below, blended with standard doubles
+        conventions from international badminton (BWF) play. You can tweak the live knobs above for your session.</p>
+      <ol class="rule-grid" id="ruleGrid">
+        <li><b>A · Rounds from time.</b> ~5 rounds per hour of play (so 2 hours ≈ 10 rounds). Auto-filled, fully editable.</li>
+        <li><b>B · No consecutive repeats.</b> The same two players are not paired as partners in back-to-back rounds.</li>
+        <li><b>C · Close levels.</b> Everyone in a match is within 2 levels of each other (e.g. an L1 plays with/against L1–L3; an L4 with L2–L4).</li>
+        <li><b>D · Mixed-first.</b> Most rounds are mixed doubles, with 1–2 men's doubles rounds that favour the stronger players.</li>
+        <li><b>E · Women's doubles.</b> When women are more than 40% of players, 1–2 women's doubles rounds are added.</li>
+        <li><b>F · Fair rest.</b> If players outnumber court slots, rest is rotated evenly and no one rests two rounds in a row.</li>
+        <li><b>G · Balanced sides.</b> If one team pairs a strong + weak player, the opposing team is built the same way.</li>
+        <li><b>H · No repeat partnerships.</b> A given pair partners together only once while unique combinations remain.</li>
+        <li><b>I · Exhaustion fallback.</b> If all valid combinations run out before the target rounds, rule C (level gap) is relaxed to fill the schedule.</li>
+        <li><b>★ BWF conventions.</b> Doubles only; even four-per-court; serve rotation &amp; side balance handled at the court, not the roaster.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="foot no-print">
+    <p>Built for IFD club play · No login · Nothing stored · Refresh clears everything.</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="scheduler.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

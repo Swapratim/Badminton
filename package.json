@@ -1,0 +1,16 @@
+{
+  "name": "ifd-badminton-scheduler",
+  "version": "1.0.0",
+  "description": "IFD Badminton Match Scheduler — a fair, balanced doubles roaster builder. Static, no login, nothing stored.",
+  "private": true,
+  "scripts": {
+    "test": "node test/engine.test.js && node test/dom.test.js",
+    "test:engine": "node test/engine.test.js",
+    "test:dom": "node test/dom.test.js",
+    "deploy": "wrangler pages deploy public --project-name=badminton --branch=main"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  },
+  "license": "MIT"
+}
