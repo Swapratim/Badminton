@@ -4,7 +4,7 @@ A sleek, sporty **doubles roaster builder** for club badminton. Enter your playe
 courts, levels and play time — it generates a fair, balanced, printable match schedule
 you can share straight to WhatsApp.
 
-**Live:** https://badminton.pages.dev
+**Live:** https://badminton-d54.pages.dev
 
 - ✅ No login, no sign-up
 - ✅ Nothing is stored — everything lives in the browser and clears on refresh

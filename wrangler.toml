@@ -1,5 +1,6 @@
 # Cloudflare Pages config — deploys the static scheduler to a free *.pages.dev subdomain.
-# Target live URL: https://badminton.pages.dev  (free Cloudflare Pages subdomain).
+# Live URL: https://badminton-d54.pages.dev  (free Cloudflare Pages subdomain;
+# the bare badminton.pages.dev was already taken, so CF assigned the -d54 suffix).
 #
 # Deploy (token with "Cloudflare Pages: Edit"):
 #   CLOUDFLARE_API_TOKEN=<token> CLOUDFLARE_ACCOUNT_ID=<id> \
