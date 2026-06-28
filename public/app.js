@@ -162,7 +162,7 @@
       courts: clampInt($("numCourts").value, 1, 15, 3),
       rounds: clampInt($("numRounds").value, 1, 40, 10),
       maxGap: parseInt($("maxGap").value, 10),
-      mensRounds: clampInt($("mensRounds").value, 0, 10, 1),
+      mensRounds: clampInt($("mensRounds").value, 0, 10, 2),
       womensRounds: clampInt($("womensRounds").value, 0, 10, 0),
       womensForced: $("womensRounds").value !== "" && parseInt($("womensRounds").value, 10) > 0,
       strongDir: $("strongDir").value,

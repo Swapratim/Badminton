@@ -29,7 +29,7 @@ you can share straight to WhatsApp.
 - **A — Rounds from time.** ~5 rounds per hour (2 hrs ≈ 10 rounds).
 - **B — No consecutive repeats.** The same pair isn't partnered in back-to-back rounds.
 - **C — Close levels.** Everyone in a match is within 2 levels (e.g. L1 plays with/against L1–L3).
-- **D — Mixed-first.** Most rounds are mixed doubles, with 1–2 men's doubles rounds favouring stronger players.
+- **D — Mixed-first.** In a 10-round schedule, maximise mixed doubles rounds with 2–3 men's doubles rounds (favouring the stronger players).
 - **E — Women's doubles.** When women are > 40% of players, 1–2 women's doubles rounds are added.
 - **F — Fair rest.** If players outnumber court slots, rest rotates evenly and no one rests two rounds in a row.
 - **G — Balanced sides.** A strong+weak team is matched against a similarly built team.
