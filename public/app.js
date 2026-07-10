@@ -76,7 +76,14 @@
   /* ---------------- render ---------------- */
   function teamHtml(team) {
     return team.map(p =>
-      `<span><span class="pname" data-pid="${p.id}">${esc(p.name)}</span><span class="lvl"> ·${p.level}${p.woman ? '<span class="w"> ♀</span>' : ''}</span></span>`
+      `<span class="pchip">` +
+        `<span class="pname" data-pid="${p.id}">${esc(p.name)}</span>` +
+        `<span class="lvl"> ·${p.level}${p.woman ? '<span class="w"> ♀</span>' : ''}</span>` +
+        `<span class="pedit">` +
+          `<select class="lvl-sel" data-pid="${p.id}" title="Level">${LEVELS.map(l => `<option${l === p.level ? ' selected' : ''}>${l}</option>`).join('')}</select>` +
+          `<button type="button" class="pg-toggle" data-pid="${p.id}" title="Toggle gender (♂/♀)">${p.woman ? '♀' : '♂'}</button>` +
+        `</span>` +
+      `</span>`
     ).join(" &amp; ");
   }
 
@@ -125,6 +132,7 @@
 
     $("output").hidden = false;
     $("tuneCard").hidden = false;
+    applyEditableState();   // restore contenteditable / editing chrome after a re-render
   }
 
   /* ---------------- share / print text ---------------- */
@@ -202,36 +210,61 @@
       }));
   }
 
-  /* ---------------- edit player names in the generated table ---------------- */
+  /* ---------------- edit player name / level / gender in the generated table ---------------- */
   let editMode = false;
-  function setEditMode(on) {
-    editMode = !!on;
+  function applyEditableState() {
+    const box = $("printable");
+    if (box) box.classList.toggle("editing", editMode);
     const btn = $("editNames");
     if (btn) { btn.setAttribute("aria-pressed", editMode ? "true" : "false"); btn.classList.toggle("active", editMode); }
     document.querySelectorAll("#printable .pname").forEach(el => {
       if (editMode) { el.setAttribute("contenteditable", "true"); el.spellcheck = false; }
       else { el.removeAttribute("contenteditable"); }
     });
-    const box = $("printable");
-    if (box) box.classList.toggle("editing", editMode);
-    if (on) toast("✏️ Tap a name to rename that player everywhere");
+  }
+  function setEditMode(on) {
+    editMode = !!on;
+    applyEditableState();
+    if (on) toast("✏️ Edit names, levels & gender — changes apply everywhere");
+  }
+  // Push an edited player's fields back to the builder row so a re-build keeps them.
+  function syncBuilder(pid) {
+    if (!state.last) return;
+    const p = state.last.players.find(x => x.id === pid);
+    const row = document.querySelectorAll(".player-row")[pid];
+    if (!p || !row) return;
+    const n = row.querySelector(".p-name"); if (n) n.value = p.name;
+    const l = row.querySelector(".p-level"); if (l) l.value = p.level;
+    const w = row.querySelector(".p-woman"); if (w) w.checked = !!p.woman;
+  }
+  // Re-render everything after any player edit: all match occurrences, match-type
+  // tags (mixed/men's/women's recompute from gender), rest lines, tally, balance.
+  function afterPlayerEdit(pid) {
+    syncBuilder(pid);
+    renderSchedule(state.last.schedule, state.last.meta);
+    updateBalanceBar();
   }
   function commitNameEdit(el) {
     if (!state.last) return;
-    const pid = +el.dataset.pid;
-    const player = state.last.players.find(p => p.id === pid);
+    const player = state.last.players.find(p => p.id === +el.dataset.pid);
     if (!player) return;
     const newName = el.textContent.trim().replace(/\s+/g, " ");
-    if (!newName) { el.textContent = player.name; return; }      // never allow blank
+    if (!newName) { el.textContent = player.name; return; }   // never allow blank
     if (newName === player.name) return;
     player.name = newName;
-    // keep the builder input in sync so a re-build preserves the new name
-    const inputs = document.querySelectorAll(".player-row .p-name");
-    if (inputs[pid]) inputs[pid].value = newName;
-    // re-render so every occurrence (matches, rest, tally) reflects the new name
-    renderSchedule(state.last.schedule, state.last.meta);
-    updateBalanceBar();
-    setEditMode(true);                                           // stay in edit mode
+    afterPlayerEdit(player.id);
+  }
+  function setLevel(pid, level) {
+    const p = state.last && state.last.players.find(x => x.id === pid);
+    if (!p || p.level === level) return;
+    p.level = level;
+    afterPlayerEdit(pid);
+  }
+  function toggleGender(pid) {
+    const p = state.last && state.last.players.find(x => x.id === pid);
+    if (!p) return;
+    p.woman = !p.woman;
+    afterPlayerEdit(pid);
   }
 
   /* ---------------- wire up ---------------- */
@@ -250,6 +283,14 @@
     $("printable").addEventListener("keydown", (e) => {
       const el = e.target.closest && e.target.closest(".pname");
       if (el && e.key === "Enter") { e.preventDefault(); el.blur(); }   // Enter commits
+    });
+    $("printable").addEventListener("change", (e) => {
+      const sel = e.target.closest && e.target.closest(".lvl-sel");
+      if (sel && editMode) setLevel(+sel.dataset.pid, sel.value);
+    });
+    $("printable").addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest(".pg-toggle");
+      if (btn && editMode) toggleGender(+btn.dataset.pid);
     });
 
     $("duration").addEventListener("input", () => {

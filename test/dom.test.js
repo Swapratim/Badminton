@@ -67,6 +67,29 @@ setTimeout(() => {
         : fail(`rename not propagated: cells=${occ.map(e=>e.textContent).join(",")} input=${builderInput.value}`);
     }
 
+    // change level for player 0 (propagates + syncs builder)
+    const lvlSel = doc.querySelector('#printable .lvl-sel[data-pid="0"]');
+    if (!lvlSel) fail("no level control in edit mode");
+    else {
+      lvlSel.value = "L4";
+      lvlSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+      const builderLvl = doc.querySelectorAll(".player-row .p-level")[0].value;
+      const allL4 = [...doc.querySelectorAll('#printable .lvl-sel[data-pid="0"]')].every(s => s.value === "L4");
+      (builderLvl === "L4" && allL4) ? ok("level change propagated to all occurrences + builder") : fail(`level not propagated: builder=${builderLvl}`);
+    }
+
+    // toggle gender for player 0 (propagates + syncs builder + flips ♂/♀)
+    const g0 = doc.querySelector('#printable .pg-toggle[data-pid="0"]');
+    if (!g0) fail("no gender control in edit mode");
+    else {
+      const wasWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
+      g0.click();
+      const nowWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
+      const btnTxt = doc.querySelector('#printable .pg-toggle[data-pid="0"]').textContent;
+      (nowWoman === !wasWoman && (nowWoman ? btnTxt === "♀" : btnTxt === "♂"))
+        ? ok(`gender toggle propagated (woman ${wasWoman}→${nowWoman})`) : fail(`gender not toggled: ${wasWoman}->${nowWoman} btn=${btnTxt}`);
+    }
+
     // custom rule add
     doc.getElementById("customRuleInput").value = "Keep Riya & Sam apart";
     doc.getElementById("addRule").click();
