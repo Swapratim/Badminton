@@ -76,7 +76,7 @@
   /* ---------------- render ---------------- */
   function teamHtml(team) {
     return team.map(p =>
-      `<span>${esc(p.name)}<span class="lvl"> ·${p.level}${p.woman ? '<span class="w"> ♀</span>' : ''}</span></span>`
+      `<span><span class="pname" data-pid="${p.id}">${esc(p.name)}</span><span class="lvl"> ·${p.level}${p.woman ? '<span class="w"> ♀</span>' : ''}</span></span>`
     ).join(" &amp; ");
   }
 
@@ -97,7 +97,7 @@
         </tr>`;
       }).join("");
       const restTxt = rnd.rest.length
-        ? `<div class="rest-line">🪑 <b>Resting:</b> ${rnd.rest.map(p => esc(p.name)).join(", ")}</div>` : "";
+        ? `<div class="rest-line">🪑 <b>Resting:</b> ${rnd.rest.map(p => `<span class="pname" data-pid="${p.id}">${esc(p.name)}</span>`).join(", ")}</div>` : "";
       const relaxNote = rnd.relaxed >= 2
         ? ' <span class="tag" title="Level gap relaxed to fill the schedule (rule I)">↯ levels relaxed</span>'
         : rnd.relaxed >= 1
@@ -176,8 +176,9 @@
 
     const schedule = Scheduler.generate(players, opt);
     const meta = `${players.length} players · ${opt.courts} court${opt.courts > 1 ? "s" : ""} · ${opt.rounds} rounds · ~${$("duration").value} hr · ${new Date().toLocaleDateString()}`;
-    state.last = { schedule, meta };
+    state.last = { schedule, meta, players };
     renderSchedule(schedule, meta);
+    setEditMode(false);   // a fresh build starts in view mode
     $("output").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -201,12 +202,55 @@
       }));
   }
 
+  /* ---------------- edit player names in the generated table ---------------- */
+  let editMode = false;
+  function setEditMode(on) {
+    editMode = !!on;
+    const btn = $("editNames");
+    if (btn) { btn.setAttribute("aria-pressed", editMode ? "true" : "false"); btn.classList.toggle("active", editMode); }
+    document.querySelectorAll("#printable .pname").forEach(el => {
+      if (editMode) { el.setAttribute("contenteditable", "true"); el.spellcheck = false; }
+      else { el.removeAttribute("contenteditable"); }
+    });
+    const box = $("printable");
+    if (box) box.classList.toggle("editing", editMode);
+    if (on) toast("✏️ Tap a name to rename that player everywhere");
+  }
+  function commitNameEdit(el) {
+    if (!state.last) return;
+    const pid = +el.dataset.pid;
+    const player = state.last.players.find(p => p.id === pid);
+    if (!player) return;
+    const newName = el.textContent.trim().replace(/\s+/g, " ");
+    if (!newName) { el.textContent = player.name; return; }      // never allow blank
+    if (newName === player.name) return;
+    player.name = newName;
+    // keep the builder input in sync so a re-build preserves the new name
+    const inputs = document.querySelectorAll(".player-row .p-name");
+    if (inputs[pid]) inputs[pid].value = newName;
+    // re-render so every occurrence (matches, rest, tally) reflects the new name
+    renderSchedule(state.last.schedule, state.last.meta);
+    updateBalanceBar();
+    setEditMode(true);                                           // stay in edit mode
+  }
+
   /* ---------------- wire up ---------------- */
   function init() {
     buildPlayerRows();
     $("numPlayers").addEventListener("change", buildPlayerRows);
     $("playerList").addEventListener("input", updateBalanceBar);
     $("playerList").addEventListener("change", updateBalanceBar);
+
+    // Edit player names directly in the generated table.
+    $("editNames").addEventListener("click", () => setEditMode(!editMode));
+    $("printable").addEventListener("focusout", (e) => {
+      const el = e.target.closest && e.target.closest(".pname");
+      if (el && editMode) commitNameEdit(el);
+    });
+    $("printable").addEventListener("keydown", (e) => {
+      const el = e.target.closest && e.target.closest(".pname");
+      if (el && e.key === "Enter") { e.preventDefault(); el.blur(); }   // Enter commits
+    });
 
     $("duration").addEventListener("input", () => {
       const h = parseFloat($("duration").value) || 0;

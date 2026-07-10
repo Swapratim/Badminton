@@ -48,6 +48,25 @@ setTimeout(() => {
     const tune = doc.getElementById("tuneCard");
     !tune.hidden ? ok("tuning panel revealed") : fail("tuning panel hidden");
 
+    // edit player names in the generated table
+    doc.getElementById("editNames").click();
+    const editable = doc.querySelectorAll('#printable .pname[contenteditable="true"]').length;
+    editable > 0 ? ok(`edit mode: ${editable} names editable`) : fail("no editable names after clicking Edit names");
+    // rename player id 0 everywhere via the first occurrence
+    const first = doc.querySelector('#printable .pname[data-pid="0"]');
+    if (!first) fail("no name cell for player 0");
+    else {
+      const before = first.textContent;
+      first.textContent = "Zephyrina";
+      first.dispatchEvent(new window.Event("focusout", { bubbles: true }));
+      const occ = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')];
+      const allRenamed = occ.length > 0 && occ.every(el => el.textContent === "Zephyrina");
+      const builderInput = doc.querySelectorAll(".player-row .p-name")[0];
+      (allRenamed && builderInput.value === "Zephyrina")
+        ? ok(`rename propagated to all ${occ.length} occurrences + builder (was "${before}")`)
+        : fail(`rename not propagated: cells=${occ.map(e=>e.textContent).join(",")} input=${builderInput.value}`);
+    }
+
     // custom rule add
     doc.getElementById("customRuleInput").value = "Keep Riya & Sam apart";
     doc.getElementById("addRule").click();
