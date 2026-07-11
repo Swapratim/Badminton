@@ -59,31 +59,36 @@ setTimeout(() => {
     const editable = doc.querySelectorAll('#printable .pname[contenteditable="true"]').length;
     editable > 0 ? ok(`edit mode: ${editable} names editable`) : fail("no editable names");
 
-    // stage a name edit (live-syncs siblings, but does NOT touch the builder yet)
-    const first = doc.querySelector('#printable .pname[data-pid="0"]');
-    const before = first.textContent;
-    first.textContent = "Zephyrina";
-    first.dispatchEvent(new window.Event("input", { bubbles: true }));
-    [...doc.querySelectorAll('#printable .pname[data-pid="0"]')].every(el => el.textContent === "Zephyrina")
-      ? ok("name edit live-syncs all occurrences") : fail("live sync failed");
-    doc.querySelectorAll(".player-row .p-name")[0].value !== "Zephyrina"
-      ? ok("builder not changed before Save (staged)") : fail("builder changed before Save");
+    // per-cell name editing: pick a player appearing in >= 2 match cells
+    const p0cells = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')];
+    p0cells.length >= 2 ? ok(`player 0 appears in ${p0cells.length} cells`) : fail("player 0 not in multiple cells");
+    const origName = p0cells[0].textContent;
+    const cellKey = p0cells[0].dataset.cell;
+    // edit ONLY the first cell — must NOT propagate to the player's other cells
+    p0cells[0].textContent = "SoloEdit";
+    p0cells[0].dispatchEvent(new window.Event("input", { bubbles: true }));
+    [...doc.querySelectorAll('#printable .pname[data-pid="0"]')]
+      .filter(el => el.dataset.cell !== cellKey).every(el => el.textContent === origName)
+      ? ok("per-cell: editing one cell leaves the player's other cells unchanged") : fail("name edit propagated to other cells");
 
-    // stage level + gender
+    // stage level + gender (still per-player)
     const lvlSel = doc.querySelector('#printable .lvl-sel[data-pid="0"]');
     lvlSel.value = "L4"; lvlSel.dispatchEvent(new window.Event("change", { bubbles: true }));
     const wasWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
     doc.querySelector('#printable .pg-toggle[data-pid="0"]').click();
 
-    // Save → commit to players + builder + all cells
+    // Save → only the edited cell keeps the new name; others stay original
     doc.getElementById("saveNames").click();
-    const sN = doc.querySelectorAll(".player-row .p-name")[0].value;
+    const editedCell = doc.querySelector(`#printable .pname[data-cell="${cellKey}"]`);
+    const others = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')].filter(el => el.dataset.cell !== cellKey);
+    (editedCell && editedCell.textContent === "SoloEdit" && others.length && others.every(el => el.textContent === origName))
+      ? ok("Save: only the edited cell keeps the new name; others unchanged")
+      : fail(`per-cell save wrong: edited=${editedCell && editedCell.textContent} others=${others.map(e=>e.textContent).join(",")}`);
+    doc.querySelectorAll(".player-row .p-name")[0].value === origName
+      ? ok("builder name unchanged by per-cell edit") : fail(`builder name changed: ${doc.querySelectorAll(".player-row .p-name")[0].value}`);
     const sL = doc.querySelectorAll(".player-row .p-level")[0].value;
     const sW = doc.querySelectorAll(".player-row .p-woman")[0].checked;
-    const allCells = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')].every(el => el.textContent === "Zephyrina");
-    (sN === "Zephyrina" && sL === "L4" && sW === !wasWoman && allCells)
-      ? ok(`Save committed name/level/gender to builder + all cells (was "${before}")`)
-      : fail(`save failed: name=${sN} lvl=${sL} woman=${wasWoman}->${sW} cells=${allCells}`);
+    (sL === "L4" && sW === !wasWoman) ? ok("level & gender still saved per-player") : fail(`lvl/gender save: ${sL} ${wasWoman}->${sW}`);
     (doc.getElementById("editNames").hidden === false && doc.getElementById("saveNames").hidden === true)
       ? ok("Save returns to view mode") : fail("view mode not restored after Save");
 

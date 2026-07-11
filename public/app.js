@@ -11,7 +11,7 @@
   const lvlNum = Scheduler.lvlNum;
   const matchType = Scheduler.matchType;
 
-  const state = { customRules: [], last: null };
+  const state = { customRules: [], last: null, nameOverrides: {} };
 
   const SAMPLE = ["Arjun","Riya","Sam","Neha","Vikram","Priya","Karan","Anita",
     "Rahul","Meera","Dev","Sara","Aman","Tara","Rohit","Isha","Nikhil","Pooja",
@@ -74,17 +74,24 @@
   }
 
   /* ---------------- render ---------------- */
-  function teamHtml(team) {
+  // The display name for one slot is its per-cell override if the editor set one,
+  // otherwise the player's name. Name edits are per-cell (not propagated); level
+  // and gender stay per-player.
+  function cellName(cell, p) {
+    return (cell in state.nameOverrides) ? state.nameOverrides[cell] : p.name;
+  }
+  function teamHtml(team, keyPrefix) {
     // View shows names only; level + gender controls appear only in edit mode.
-    return team.map(p =>
-      `<span class="pchip">` +
-        `<span class="pname" data-pid="${p.id}">${esc(p.name)}</span>` +
+    return team.map((p, s) => {
+      const cell = `${keyPrefix}:${s}`;
+      return `<span class="pchip">` +
+        `<span class="pname" data-pid="${p.id}" data-cell="${cell}">${esc(cellName(cell, p))}</span>` +
         `<span class="pedit">` +
           `<select class="lvl-sel" data-pid="${p.id}" title="Level">${LEVELS.map(l => `<option${l === p.level ? ' selected' : ''}>${l}</option>`).join('')}</select>` +
           `<button type="button" class="pg-toggle" data-pid="${p.id}" title="Toggle gender (♂/♀)">${p.woman ? '♀' : '♂'}</button>` +
         `</span>` +
-      `</span>`
-    ).join(" &amp; ");
+      `</span>`;
+    }).join(" &amp; ");
   }
 
   function renderSchedule(schedule, meta) {
@@ -97,14 +104,14 @@
         const mt = matchType(m);
         return `<tr>
           <td class="court-col">${i + 1}</td>
-          <td class="team">${teamHtml(m[0])}</td>
+          <td class="team">${teamHtml(m[0], `${rnd.round}:${i}:0`)}</td>
           <td class="vs">vs</td>
-          <td class="team">${teamHtml(m[1])}</td>
+          <td class="team">${teamHtml(m[1], `${rnd.round}:${i}:1`)}</td>
           <td><span class="mtag ${mt}">${mt === "mens" ? "Men's" : mt === "womens" ? "Women's" : "Mixed"}</span></td>
         </tr>`;
       }).join("");
       const restTxt = rnd.rest.length
-        ? `<div class="rest-line">🪑 <b>Resting:</b> ${rnd.rest.map(p => `<span class="pname" data-pid="${p.id}">${esc(p.name)}</span>`).join(", ")}</div>` : "";
+        ? `<div class="rest-line">🪑 <b>Resting:</b> ${rnd.rest.map((p, ri) => { const c = `rest:${rnd.round}:${ri}`; return `<span class="pname" data-pid="${p.id}" data-cell="${c}">${esc(cellName(c, p))}</span>`; }).join(", ")}</div>` : "";
       const relaxNote = rnd.relaxed >= 2
         ? ' <span class="tag" title="Level gap relaxed to fill the schedule (rule I)">↯ levels relaxed</span>'
         : rnd.relaxed >= 1
@@ -184,7 +191,8 @@
 
     const schedule = Scheduler.generate(players, opt);
     const meta = `${players.length} players · ${opt.courts} court${opt.courts > 1 ? "s" : ""} · ${opt.rounds} rounds · ~${$("duration").value} hr · ${new Date().toLocaleDateString()}`;
-    editMode = false;     // a fresh build starts in view mode
+    editMode = false;             // a fresh build starts in view mode
+    state.nameOverrides = {};     // and clears any per-cell name edits
     state.last = { schedule, meta, players };
     renderSchedule(schedule, meta);
     $("output").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -248,20 +256,32 @@
   function saveEdits() {
     if (!state.last) return;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    const seen = new Set();
-    document.querySelectorAll("#printable .pname[data-pid]").forEach(el => {
+
+    // Names: per-cell overrides. Each edited cell is independent — a name is NOT
+    // propagated to the player's other appearances.
+    document.querySelectorAll("#printable .pname[data-cell]").forEach(el => {
+      const cell = el.dataset.cell;
+      const p = state.last.players.find(x => x.id === +el.dataset.pid);
+      const base = p ? p.name : "";
+      const txt = el.textContent.trim().replace(/\s+/g, " ");
+      if (!txt || txt === base) delete state.nameOverrides[cell];   // blank / unchanged → drop override
+      else state.nameOverrides[cell] = txt;
+    });
+
+    // Level & gender stay per-player (their controls were kept in sync across cells).
+    const done = new Set();
+    document.querySelectorAll("#printable [data-pid]").forEach(el => {
       const pid = +el.dataset.pid;
-      if (seen.has(pid)) return; seen.add(pid);
+      if (done.has(pid)) return; done.add(pid);
       const p = state.last.players.find(x => x.id === pid);
       if (!p) return;
-      const name = el.textContent.trim().replace(/\s+/g, " ");
-      if (name) p.name = name;   // ignore blank → keep previous
       const lvl = document.querySelector(`#printable .lvl-sel[data-pid="${pid}"]`);
       if (lvl) p.level = lvl.value;
       const g = document.querySelector(`#printable .pg-toggle[data-pid="${pid}"]`);
       if (g) p.woman = (g.textContent.trim() === "♀");
       syncBuilder(pid);
     });
+
     editMode = false;
     renderSchedule(state.last.schedule, state.last.meta);   // view mode, match-type tags recompute
     updateBalanceBar();
@@ -279,14 +299,7 @@
     $("editNames").addEventListener("click", enterEditMode);
     $("saveNames").addEventListener("click", saveEdits);
     $("cancelNames").addEventListener("click", cancelEdit);
-    // keep every occurrence of a player in sync as you type (no commit yet)
-    $("printable").addEventListener("input", (e) => {
-      const el = e.target.closest && e.target.closest(".pname");
-      if (!el || !editMode) return;
-      const val = el.textContent;
-      document.querySelectorAll(`#printable .pname[data-pid="${el.dataset.pid}"]`)
-        .forEach(o => { if (o !== el) o.textContent = val; });
-    });
+    // (names are edited per-cell — no cross-cell propagation)
     $("printable").addEventListener("change", (e) => {
       const sel = e.target.closest && e.target.closest(".lvl-sel");
       if (!sel || !editMode) return;
