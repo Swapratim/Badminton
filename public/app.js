@@ -75,10 +75,10 @@
 
   /* ---------------- render ---------------- */
   function teamHtml(team) {
+    // View shows names only; level + gender controls appear only in edit mode.
     return team.map(p =>
       `<span class="pchip">` +
         `<span class="pname" data-pid="${p.id}">${esc(p.name)}</span>` +
-        `<span class="lvl"> ·${p.level}${p.woman ? '<span class="w"> ♀</span>' : ''}</span>` +
         `<span class="pedit">` +
           `<select class="lvl-sel" data-pid="${p.id}" title="Level">${LEVELS.map(l => `<option${l === p.level ? ' selected' : ''}>${l}</option>`).join('')}</select>` +
           `<button type="button" class="pg-toggle" data-pid="${p.id}" title="Toggle gender (♂/♀)">${p.woman ? '♀' : '♂'}</button>` +
@@ -184,9 +184,9 @@
 
     const schedule = Scheduler.generate(players, opt);
     const meta = `${players.length} players · ${opt.courts} court${opt.courts > 1 ? "s" : ""} · ${opt.rounds} rounds · ~${$("duration").value} hr · ${new Date().toLocaleDateString()}`;
+    editMode = false;     // a fresh build starts in view mode
     state.last = { schedule, meta, players };
     renderSchedule(schedule, meta);
-    setEditMode(false);   // a fresh build starts in view mode
     $("output").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -210,26 +210,34 @@
       }));
   }
 
-  /* ---------------- edit player name / level / gender in the generated table ---------------- */
+  /* ---------------- edit player name / level / gender, then Save ---------------- */
+  // Edits stage live in the table (all occurrences of a player stay in sync as you
+  // type); nothing is written to the players or the builder until Save is clicked.
   let editMode = false;
   function applyEditableState() {
     const box = $("printable");
     if (box) box.classList.toggle("editing", editMode);
-    const btn = $("editNames");
-    if (btn) { btn.setAttribute("aria-pressed", editMode ? "true" : "false"); btn.classList.toggle("active", editMode); }
+    $("editNames").hidden = editMode;
+    $("saveNames").hidden = !editMode;
+    $("cancelNames").hidden = !editMode;
     document.querySelectorAll("#printable .pname").forEach(el => {
       if (editMode) { el.setAttribute("contenteditable", "true"); el.spellcheck = false; }
       else { el.removeAttribute("contenteditable"); }
     });
   }
-  function setEditMode(on) {
-    editMode = !!on;
-    applyEditableState();
-    if (on) toast("✏️ Edit names, levels & gender — changes apply everywhere");
-  }
-  // Push an edited player's fields back to the builder row so a re-build keeps them.
-  function syncBuilder(pid) {
+  function enterEditMode() {
     if (!state.last) return;
+    editMode = true;
+    applyEditableState();
+    toast("✏️ Edit names, levels & gender — then press Save");
+  }
+  function cancelEdit() {
+    editMode = false;
+    renderSchedule(state.last.schedule, state.last.meta);   // discard staged edits
+    toast("Edits discarded");
+  }
+  // Push a saved player's fields back to the builder row so a re-build keeps them.
+  function syncBuilder(pid) {
     const p = state.last.players.find(x => x.id === pid);
     const row = document.querySelectorAll(".player-row")[pid];
     if (!p || !row) return;
@@ -237,34 +245,27 @@
     const l = row.querySelector(".p-level"); if (l) l.value = p.level;
     const w = row.querySelector(".p-woman"); if (w) w.checked = !!p.woman;
   }
-  // Re-render everything after any player edit: all match occurrences, match-type
-  // tags (mixed/men's/women's recompute from gender), rest lines, tally, balance.
-  function afterPlayerEdit(pid) {
-    syncBuilder(pid);
-    renderSchedule(state.last.schedule, state.last.meta);
-    updateBalanceBar();
-  }
-  function commitNameEdit(el) {
+  function saveEdits() {
     if (!state.last) return;
-    const player = state.last.players.find(p => p.id === +el.dataset.pid);
-    if (!player) return;
-    const newName = el.textContent.trim().replace(/\s+/g, " ");
-    if (!newName) { el.textContent = player.name; return; }   // never allow blank
-    if (newName === player.name) return;
-    player.name = newName;
-    afterPlayerEdit(player.id);
-  }
-  function setLevel(pid, level) {
-    const p = state.last && state.last.players.find(x => x.id === pid);
-    if (!p || p.level === level) return;
-    p.level = level;
-    afterPlayerEdit(pid);
-  }
-  function toggleGender(pid) {
-    const p = state.last && state.last.players.find(x => x.id === pid);
-    if (!p) return;
-    p.woman = !p.woman;
-    afterPlayerEdit(pid);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    const seen = new Set();
+    document.querySelectorAll("#printable .pname[data-pid]").forEach(el => {
+      const pid = +el.dataset.pid;
+      if (seen.has(pid)) return; seen.add(pid);
+      const p = state.last.players.find(x => x.id === pid);
+      if (!p) return;
+      const name = el.textContent.trim().replace(/\s+/g, " ");
+      if (name) p.name = name;   // ignore blank → keep previous
+      const lvl = document.querySelector(`#printable .lvl-sel[data-pid="${pid}"]`);
+      if (lvl) p.level = lvl.value;
+      const g = document.querySelector(`#printable .pg-toggle[data-pid="${pid}"]`);
+      if (g) p.woman = (g.textContent.trim() === "♀");
+      syncBuilder(pid);
+    });
+    editMode = false;
+    renderSchedule(state.last.schedule, state.last.meta);   // view mode, match-type tags recompute
+    updateBalanceBar();
+    toast("✓ Changes saved");
   }
 
   /* ---------------- wire up ---------------- */
@@ -274,23 +275,34 @@
     $("playerList").addEventListener("input", updateBalanceBar);
     $("playerList").addEventListener("change", updateBalanceBar);
 
-    // Edit player names directly in the generated table.
-    $("editNames").addEventListener("click", () => setEditMode(!editMode));
-    $("printable").addEventListener("focusout", (e) => {
+    // Edit players in the table; changes stage live, then Save/Cancel.
+    $("editNames").addEventListener("click", enterEditMode);
+    $("saveNames").addEventListener("click", saveEdits);
+    $("cancelNames").addEventListener("click", cancelEdit);
+    // keep every occurrence of a player in sync as you type (no commit yet)
+    $("printable").addEventListener("input", (e) => {
       const el = e.target.closest && e.target.closest(".pname");
-      if (el && editMode) commitNameEdit(el);
-    });
-    $("printable").addEventListener("keydown", (e) => {
-      const el = e.target.closest && e.target.closest(".pname");
-      if (el && e.key === "Enter") { e.preventDefault(); el.blur(); }   // Enter commits
+      if (!el || !editMode) return;
+      const val = el.textContent;
+      document.querySelectorAll(`#printable .pname[data-pid="${el.dataset.pid}"]`)
+        .forEach(o => { if (o !== el) o.textContent = val; });
     });
     $("printable").addEventListener("change", (e) => {
       const sel = e.target.closest && e.target.closest(".lvl-sel");
-      if (sel && editMode) setLevel(+sel.dataset.pid, sel.value);
+      if (!sel || !editMode) return;
+      document.querySelectorAll(`#printable .lvl-sel[data-pid="${sel.dataset.pid}"]`)
+        .forEach(o => { o.value = sel.value; });
     });
     $("printable").addEventListener("click", (e) => {
       const btn = e.target.closest && e.target.closest(".pg-toggle");
-      if (btn && editMode) toggleGender(+btn.dataset.pid);
+      if (!btn || !editMode) return;
+      const flipped = btn.textContent.trim() === "♀" ? "♂" : "♀";
+      document.querySelectorAll(`#printable .pg-toggle[data-pid="${btn.dataset.pid}"]`)
+        .forEach(o => { o.textContent = flipped; });
+    });
+    $("printable").addEventListener("keydown", (e) => {
+      const el = e.target.closest && e.target.closest(".pname");
+      if (el && e.key === "Enter") { e.preventDefault(); el.blur(); }
     });
 
     $("duration").addEventListener("input", () => {

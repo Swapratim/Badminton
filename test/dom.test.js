@@ -48,47 +48,44 @@ setTimeout(() => {
     const tune = doc.getElementById("tuneCard");
     !tune.hidden ? ok("tuning panel revealed") : fail("tuning panel hidden");
 
-    // edit player names in the generated table
+    // feature 2: the schedule view shows names only — no per-player ·level / ♀ span
+    !doc.querySelector("table.sched td.team .lvl") && !doc.querySelector("table.sched td.team .w")
+      ? ok("view table has no per-player level/gender text") : fail("view still renders level/gender text");
+
+    // ---- staged edit → Save ----
     doc.getElementById("editNames").click();
+    (!doc.getElementById("saveNames").hidden && doc.getElementById("editNames").hidden)
+      ? ok("edit mode: Save shown, Edit hidden") : fail("edit/save button toggle wrong");
     const editable = doc.querySelectorAll('#printable .pname[contenteditable="true"]').length;
-    editable > 0 ? ok(`edit mode: ${editable} names editable`) : fail("no editable names after clicking Edit names");
-    // rename player id 0 everywhere via the first occurrence
+    editable > 0 ? ok(`edit mode: ${editable} names editable`) : fail("no editable names");
+
+    // stage a name edit (live-syncs siblings, but does NOT touch the builder yet)
     const first = doc.querySelector('#printable .pname[data-pid="0"]');
-    if (!first) fail("no name cell for player 0");
-    else {
-      const before = first.textContent;
-      first.textContent = "Zephyrina";
-      first.dispatchEvent(new window.Event("focusout", { bubbles: true }));
-      const occ = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')];
-      const allRenamed = occ.length > 0 && occ.every(el => el.textContent === "Zephyrina");
-      const builderInput = doc.querySelectorAll(".player-row .p-name")[0];
-      (allRenamed && builderInput.value === "Zephyrina")
-        ? ok(`rename propagated to all ${occ.length} occurrences + builder (was "${before}")`)
-        : fail(`rename not propagated: cells=${occ.map(e=>e.textContent).join(",")} input=${builderInput.value}`);
-    }
+    const before = first.textContent;
+    first.textContent = "Zephyrina";
+    first.dispatchEvent(new window.Event("input", { bubbles: true }));
+    [...doc.querySelectorAll('#printable .pname[data-pid="0"]')].every(el => el.textContent === "Zephyrina")
+      ? ok("name edit live-syncs all occurrences") : fail("live sync failed");
+    doc.querySelectorAll(".player-row .p-name")[0].value !== "Zephyrina"
+      ? ok("builder not changed before Save (staged)") : fail("builder changed before Save");
 
-    // change level for player 0 (propagates + syncs builder)
+    // stage level + gender
     const lvlSel = doc.querySelector('#printable .lvl-sel[data-pid="0"]');
-    if (!lvlSel) fail("no level control in edit mode");
-    else {
-      lvlSel.value = "L4";
-      lvlSel.dispatchEvent(new window.Event("change", { bubbles: true }));
-      const builderLvl = doc.querySelectorAll(".player-row .p-level")[0].value;
-      const allL4 = [...doc.querySelectorAll('#printable .lvl-sel[data-pid="0"]')].every(s => s.value === "L4");
-      (builderLvl === "L4" && allL4) ? ok("level change propagated to all occurrences + builder") : fail(`level not propagated: builder=${builderLvl}`);
-    }
+    lvlSel.value = "L4"; lvlSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    const wasWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
+    doc.querySelector('#printable .pg-toggle[data-pid="0"]').click();
 
-    // toggle gender for player 0 (propagates + syncs builder + flips ♂/♀)
-    const g0 = doc.querySelector('#printable .pg-toggle[data-pid="0"]');
-    if (!g0) fail("no gender control in edit mode");
-    else {
-      const wasWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
-      g0.click();
-      const nowWoman = doc.querySelectorAll(".player-row .p-woman")[0].checked;
-      const btnTxt = doc.querySelector('#printable .pg-toggle[data-pid="0"]').textContent;
-      (nowWoman === !wasWoman && (nowWoman ? btnTxt === "♀" : btnTxt === "♂"))
-        ? ok(`gender toggle propagated (woman ${wasWoman}→${nowWoman})`) : fail(`gender not toggled: ${wasWoman}->${nowWoman} btn=${btnTxt}`);
-    }
+    // Save → commit to players + builder + all cells
+    doc.getElementById("saveNames").click();
+    const sN = doc.querySelectorAll(".player-row .p-name")[0].value;
+    const sL = doc.querySelectorAll(".player-row .p-level")[0].value;
+    const sW = doc.querySelectorAll(".player-row .p-woman")[0].checked;
+    const allCells = [...doc.querySelectorAll('#printable .pname[data-pid="0"]')].every(el => el.textContent === "Zephyrina");
+    (sN === "Zephyrina" && sL === "L4" && sW === !wasWoman && allCells)
+      ? ok(`Save committed name/level/gender to builder + all cells (was "${before}")`)
+      : fail(`save failed: name=${sN} lvl=${sL} woman=${wasWoman}->${sW} cells=${allCells}`);
+    (doc.getElementById("editNames").hidden === false && doc.getElementById("saveNames").hidden === true)
+      ? ok("Save returns to view mode") : fail("view mode not restored after Save");
 
     // custom rule add
     doc.getElementById("customRuleInput").value = "Keep Riya & Sam apart";

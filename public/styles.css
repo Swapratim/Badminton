@@ -212,9 +212,7 @@ table.sched .vs { width: 44px; text-align: center; color: var(--muted); font-wei
 
 /* ---------- Print: only the schedule table ---------- */
 /* ---- inline player name / level / gender editing ---- */
-#editNames.active { background: var(--accent-2); color: #05231d; font-weight: 700; }
 .pedit { display: none; }
-.printable.editing .lvl { display: none; }                 /* hide the read-only ·level/♀ while editing */
 .printable.editing .pedit { display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; vertical-align: middle; }
 .lvl-sel { font-size: .78em; padding: 1px 3px; border: 1px solid var(--accent-2); border-radius: 4px; background: #fff; cursor: pointer; }
 .pg-toggle { font-size: .85em; line-height: 1.2; padding: 1px 6px; border: 1px solid var(--accent-2); border-radius: 4px; background: #fff; cursor: pointer; }
@@ -241,5 +239,4 @@ table.sched .vs { width: 44px; text-align: center; color: var(--muted); font-wei
   .round-block { break-inside: avoid; }
   .pname { box-shadow: none !important; background: none !important; }   /* no edit chrome in print */
   .pedit { display: none !important; }                                  /* never print form controls */
-  .lvl { display: inline !important; }                                  /* always print the ·level/♀ text */
 }
