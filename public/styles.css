@@ -16,6 +16,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* class display rules must not override the hidden attribute */
 html, body { margin: 0; padding: 0; }
 body {
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
@@ -144,40 +145,42 @@ input:focus, select:focus { outline: none; border-color: var(--court); box-shado
 
 /* ---------- Printable schedule ---------- */
 .printable { background: var(--paper); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); border: 1px solid #e4ece8; }
-.print-head { text-align: center; border-bottom: 3px solid var(--court); padding-bottom: 12px; margin-bottom: 16px; }
-.print-head h2 { margin: 0; color: var(--court-dark); font-size: 1.4rem; }
-.print-meta { margin: 6px 0 0; color: var(--muted); font-size: .88rem; font-weight: 600; }
+/* ===== Roster / schedule output: black & white (print-friendly) ===== */
+.print-head { text-align: center; border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
+.print-head h2 { margin: 0; color: #000; font-size: 1.4rem; }
+.print-meta { margin: 6px 0 0; color: #555; font-size: .88rem; font-weight: 600; }
 
 .round-block { margin-bottom: 18px; break-inside: avoid; }
 .round-title {
   display: flex; align-items: center; gap: 10px; margin: 0 0 8px;
-  font-size: 1.02rem; font-weight: 800; color: var(--court-dark);
+  font-size: 1.02rem; font-weight: 800; color: #000;
 }
+/* B&W tags — distinguished by fill vs outline vs grey (no colour) */
 .round-title .tag {
   font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; padding: 2px 9px; border-radius: 999px;
-  background: #eafdf4; color: #07623a; border: 1px solid #bde8d3; font-weight: 800;
+  background: #fff; color: #111; border: 1px solid #111; font-weight: 800;
 }
-.round-title .tag.mixed { background: #eef4ff; color: #1d4ed8; border-color: #c7d7ff; }
-.round-title .tag.mens { background: #eefaf3; color: #07623a; border-color: #bde8d3; }
-.round-title .tag.womens { background: #fdeef6; color: #b21e6b; border-color: #f3c6df; }
+.round-title .tag.mixed { background: #111; color: #fff; border-color: #111; }
+.round-title .tag.mens { background: #fff; color: #111; border-color: #111; }
+.round-title .tag.womens { background: #6b6b6b; color: #fff; border-color: #6b6b6b; }
 
 table.sched { width: 100%; border-collapse: collapse; font-size: .92rem; }
-table.sched th, table.sched td { border: 1px solid #dbe7e1; padding: 9px 10px; text-align: left; }
-table.sched th { background: var(--court); color: #fff; font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
-table.sched tr:nth-child(even) td { background: #f7fbf9; }
-table.sched .court-col { width: 64px; text-align: center; font-weight: 800; color: var(--court-dark); }
-table.sched .vs { width: 44px; text-align: center; color: var(--muted); font-weight: 800; }
-.team { font-weight: 600; }
-.team .lvl { color: var(--muted); font-weight: 600; font-size: .82em; }
-.team .w { color: #d6336c; }
-.mtag { font-size: .7rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #eef4ff; color: #1d4ed8; }
-.mtag.mens { background: #eefaf3; color: #07623a; }
-.mtag.womens { background: #fdeef6; color: #b21e6b; }
+table.sched th, table.sched td { border: 1px solid #888; padding: 9px 10px; text-align: left; }
+table.sched th { background: #111; color: #fff; font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
+table.sched tr:nth-child(even) td { background: #f0f0f0; }
+table.sched .court-col { width: 64px; text-align: center; font-weight: 800; color: #000; }
+table.sched .vs { width: 44px; text-align: center; color: #666; font-weight: 800; }
+.team { font-weight: 600; color: #000; }
+.team .lvl { color: #555; font-weight: 600; font-size: .82em; }
+.team .w { color: #000; }
+.mtag { font-size: .7rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #111; color: #fff; border: 1px solid #111; }
+.mtag.mens { background: #fff; color: #111; }
+.mtag.womens { background: #6b6b6b; color: #fff; }
 
-.rest-summary { margin-top: 8px; font-size: .9rem; }
-.rest-summary .rest-line { padding: 6px 0; border-top: 1px dashed #d8e6df; }
-.rest-summary b { color: var(--court-dark); }
-.print-notes { margin-top: 14px; font-size: .85rem; color: #33433b; }
+.rest-summary { margin-top: 8px; font-size: .9rem; color: #111; }
+.rest-summary .rest-line { padding: 6px 0; border-top: 1px dashed #999; }
+.rest-summary b { color: #000; }
+.print-notes { margin-top: 14px; font-size: .85rem; color: #333; }
 .print-notes ul { margin: 6px 0 0; padding-left: 18px; }
 
 /* ---------- Rules section ---------- */
@@ -229,13 +232,16 @@ table.sched .vs { width: 44px; text-align: center; color: var(--muted); font-wei
 }
 
 @media print {
+  @page { size: landscape; margin: 12mm; }          /* print the schedule in landscape */
   body { background: #fff; }
   .no-print, .banner, .foot { display: none !important; }
   .wrap { max-width: none; margin: 0; padding: 0; }
   #output { display: block !important; }
   .printable { box-shadow: none; border: none; border-radius: 0; padding: 0; }
   .print-head h2 { color: #000; }
-  table.sched th { background: #0b6b3a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.sched th { background: #111 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.sched tr:nth-child(even) td { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .mtag, .round-title .tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .round-block { break-inside: avoid; }
   .pname { box-shadow: none !important; background: none !important; }   /* no edit chrome in print */
   .pedit { display: none !important; }                                  /* never print form controls */
